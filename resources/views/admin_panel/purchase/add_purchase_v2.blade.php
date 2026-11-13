@@ -522,6 +522,29 @@
                         </div>
                     </div>
 
+                    <div class="row g-2 align-items-end mt-1 p-2 rounded bg-light border">
+                        <div class="col-md-3">
+                            <label class="form-label fw-bold mb-1 text-muted small"><i class="fas fa-truck text-primary me-1"></i> Truck / Vehicle No</label>
+                            <input type="text" class="form-control text-uppercase" name="truck_no" placeholder="e.g. LES-4580" style="height: 36px; font-size: 0.85rem;">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label fw-bold mb-1 text-muted small"><i class="fas fa-user text-secondary me-1"></i> Driver Name</label>
+                            <input type="text" class="form-control" name="driver_name" placeholder="Driver Name" style="height: 36px; font-size: 0.85rem;">
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label fw-bold mb-1 text-muted small"><i class="fas fa-phone text-secondary me-1"></i> Driver Contact</label>
+                            <input type="text" class="form-control" name="driver_phone" placeholder="03xx-xxxxxxx" style="height: 36px; font-size: 0.85rem;">
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label fw-bold mb-1 text-muted small"><i class="fas fa-shipping-fast text-secondary me-1"></i> Transporter</label>
+                            <input type="text" class="form-control" name="transporter_name" placeholder="Cargo / Goods" style="height: 36px; font-size: 0.85rem;">
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label fw-bold mb-1 text-muted small"><i class="fas fa-file-invoice text-secondary me-1"></i> Bilty No</label>
+                            <input type="text" class="form-control" name="bilty_no" placeholder="Bilty #" style="height: 36px; font-size: 0.85rem;">
+                        </div>
+                    </div>
+
                     <div class="row g-2 align-items-end mt-1">
                         <div class="col-md-8">
                             <label class="form-label fw-bold mb-1 text-muted small">M.Bill / Remarks</label>

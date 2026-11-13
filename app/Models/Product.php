@@ -18,6 +18,16 @@ class Product extends Model
     //     'wholesale_price', 'retail_price', 'initial_stock', 'alert_quantity'
     // ];
     // app/Models/Product.php
+    public function getNameAttribute()
+    {
+        return $this->item_name;
+    }
+
+    public function getPurchasePriceAttribute()
+    {
+        return $this->purchase_price_per_piece;
+    }
+
     public function warehouses()
     {
         return $this->belongsToMany(Warehouse::class, 'warehouse_stocks', 'product_id', 'warehouse_id')

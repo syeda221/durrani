@@ -360,6 +360,18 @@
                                                         class="menu_icon icon-basket"></i><span>Purchase Bills</span></a>
                                             </li>
                                             @endcan
+                                            @can('purchases.create')
+                                            <li class="nav-item"><a class="nav-link"
+                                                    href="{{ route('truck-purchase.create') }}"><i
+                                                        class="menu_icon icon-speedometer"></i><span>Truck Purchase</span></a>
+                                            </li>
+                                            @endcan
+                                            @can('purchases.view')
+                                            <li class="nav-item"><a class="nav-link"
+                                                    href="{{ route('truck-purchase.index') }}"><i
+                                                        class="menu_icon icon-layers"></i><span>Truck Consignments</span></a>
+                                            </li>
+                                            @endcan
                                         </ul>
                                     </div>
                                 </div>

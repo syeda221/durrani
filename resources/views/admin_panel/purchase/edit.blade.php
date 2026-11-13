@@ -420,6 +420,24 @@
                                 @endif
                             </div>
 
+                            <div class="p-2 mb-2 rounded bg-light border">
+                                <span class="fw-bold text-dark small d-block mb-1"><i class="fas fa-truck text-primary me-1"></i> Truck / Transport Details</span>
+                                <div class="row g-1">
+                                    <div class="col-6">
+                                        <input type="text" class="form-control form-control-sm text-uppercase" name="truck_no" value="{{ $purchase->truck_no }}" placeholder="Truck #">
+                                    </div>
+                                    <div class="col-6">
+                                        <input type="text" class="form-control form-control-sm" name="driver_name" value="{{ $purchase->driver_name }}" placeholder="Driver Name">
+                                    </div>
+                                    <div class="col-6 mt-1">
+                                        <input type="text" class="form-control form-control-sm" name="driver_phone" value="{{ $purchase->driver_phone }}" placeholder="Driver Phone">
+                                    </div>
+                                    <div class="col-6 mt-1">
+                                        <input type="text" class="form-control form-control-sm" name="bilty_no" value="{{ $purchase->bilty_no }}" placeholder="Bilty #">
+                                    </div>
+                                </div>
+                            </div>
+
                             <div class="mb-2">
                                 <label class="form-label fw-bold text-muted small"><i class="bi bi-building me-1 text-primary"></i> Warehouse</label>
                                 @php

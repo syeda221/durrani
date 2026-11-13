@@ -20,6 +20,7 @@ use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ProductSetController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\PurchaseController;
+use App\Http\Controllers\TruckPurchaseController;
 use App\Http\Controllers\GoodsReceivingNoteController;
 use App\Http\Controllers\DirectGRNController;
 use App\Http\Controllers\ReportingController;
@@ -351,6 +352,19 @@ Route::middleware('auth')->group(function () {
     Route::get('/get-price', [ProductController::class, 'getPrice'])->name('get-price');
     Route::get('/purchase/{id}/invoice', [PurchaseController::class, 'Invoice'])->middleware('permission:purchases.print|purchase_orders.print')->name('purchase.invoice');
     Route::get('/purchase/{id}/receipt', [PurchaseController::class, 'receipt'])->middleware('permission:purchases.print')->name('purchase.receipt');
+
+    // Truck Consignment & Multi-Vendor Purchase Routes
+    Route::prefix('truck-purchase')->name('truck-purchase.')->group(function () {
+        Route::get('/', [TruckPurchaseController::class, 'index'])->name('index');
+        Route::get('/create', [TruckPurchaseController::class, 'create'])->name('create');
+        Route::post('/store', [TruckPurchaseController::class, 'store'])->name('store');
+        Route::get('/{id}', [TruckPurchaseController::class, 'show'])->name('show');
+        Route::get('/{id}/sale', [TruckPurchaseController::class, 'createSale'])->name('sale.create');
+        Route::post('/{id}/sale', [TruckPurchaseController::class, 'storeSale'])->name('sale.store');
+        Route::post('/{id}/unload', [TruckPurchaseController::class, 'unloadToWarehouse'])->name('unload');
+        Route::get('/{id}/print', [TruckPurchaseController::class, 'print'])->name('print');
+        Route::delete('/{id}', [TruckPurchaseController::class, 'destroy'])->name('destroy');
+    });
 
     Route::get('purchase/return', [PurchaseController::class, 'purchaseReturnIndex'])->name('purchase.return.index');
     Route::get('purchase/return/{id}/view', [PurchaseController::class, 'viewReturn'])->name('purchase.return.view');

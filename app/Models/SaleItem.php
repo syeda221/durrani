@@ -7,9 +7,10 @@ use Illuminate\Database\Eloquent\Model;
 class SaleItem extends Model
 {
     protected $fillable = [
-        'sale_id', 'warehouse_id', 'warehouse_breakdown', 'product_id', 'product_set_id',
+        'sale_id', 'warehouse_id', 'truck_consignment_id', 'truck_consignment_item_id',
+        'vendor_id', 'warehouse_breakdown', 'product_id', 'product_set_id', 'product_name',
         'brand_id', 'category_id', 'sub_category_id', 'unit_id',
-        'qty', 'price', 'total',
+        'qty', 'price', 'purchase_price', 'total',
         'discount_percent', 'discount_amount', 'discount_type',
         'color', 'description', 'total_pieces', 'loose_pieces',
         'price_per_piece', 'price_per_m2', 'delivered_qty'

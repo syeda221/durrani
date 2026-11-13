@@ -904,6 +904,16 @@
                                                                     class="fas fa-shopping-cart"></i> Purchase Bills</a>
                                                         </li>
                                                     @endcan
+                                                    @can('purchases.create')
+                                                        <li><a href="{{ route('truck-purchase.create') }}"><i
+                                                                    class="fas fa-truck-moving"></i> Truck Purchase</a>
+                                                        </li>
+                                                    @endcan
+                                                    @can('purchases.view')
+                                                        <li><a href="{{ route('truck-purchase.index') }}"><i
+                                                                    class="fas fa-truck-loading"></i> Truck Consignments</a>
+                                                        </li>
+                                                    @endcan
                                                     @can('purchase_pos.create')
                                                         <li><a href="{{ route('purchase-pos.index') }}"><i
                                                                     class="fas fa-cash-register"></i> Purchase POS</a>

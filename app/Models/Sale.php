@@ -8,17 +8,22 @@ use Illuminate\Database\Eloquent\Model;
 class Sale extends Model
 {
     protected $fillable = [
-        'customer_id', 'warehouse_id', 'reference', 'total_amount_Words', 'total_bill_amount',
+        'customer_id', 'warehouse_id', 'truck_consignment_id', 'reference', 'total_amount_Words', 'total_bill_amount',
         'overall_discount_type', 'overall_discount_value',
         'total_extradiscount', 'shipping_charges', 'cutting_charges', 'total_net', 'cash', 'card', 'change', 'change_account_id',
         'advance_adjusted', 'advance_settlement_note',
         'total_items', 'discount_type', 'sale_status', 'invoice_no', 'is_booking',
-        'sale_type', 'delivery_status', 'parent_quotation_id', 'attachment'
+        'sale_type', 'delivery_status', 'parent_quotation_id', 'attachment', 'comment'
     ];
 
     public function warehouse()
     {
         return $this->belongsTo(Warehouse::class, 'warehouse_id', 'id');
+    }
+
+    public function truckConsignment()
+    {
+        return $this->belongsTo(TruckConsignment::class, 'truck_consignment_id');
     }
 
     public function customer_relation()

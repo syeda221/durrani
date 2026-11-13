@@ -528,6 +528,24 @@
                                 <strong class="font-monospace">{{ $purchase->purchase_order_no }}</strong>
                             </div>
                         @endif
+                        @if(!empty($purchase->truck_no))
+                            <div>
+                                <span class="info-label">Truck #:</span>
+                                <strong class="text-dark">{{ $purchase->truck_no }}</strong>
+                            </div>
+                        @endif
+                        @if(!empty($purchase->driver_name))
+                            <div>
+                                <span class="info-label">Driver:</span>
+                                <span>{{ $purchase->driver_name }} {{ $purchase->driver_phone ? '('.$purchase->driver_phone.')' : '' }}</span>
+                            </div>
+                        @endif
+                        @if(!empty($purchase->bilty_no))
+                            <div>
+                                <span class="info-label">Bilty #:</span>
+                                <span class="font-monospace">{{ $purchase->bilty_no }}</span>
+                            </div>
+                        @endif
                     </div>
                 </div>
             </div>

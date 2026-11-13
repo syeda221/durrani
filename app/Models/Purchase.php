@@ -39,6 +39,7 @@ class Purchase extends Model
     public function branch()   { return $this->belongsTo(Branch::class); }
     public function warehouse(){ return $this->belongsTo(Warehouse::class); }
     public function vendor()   { return $this->belongsTo(Vendor::class, 'vendor_id'); }
+    public function truckConsignment() { return $this->belongsTo(TruckConsignment::class, 'truck_consignment_id'); }
     public function items()    { return $this->hasMany(PurchaseItem::class); }
     public function returns()  { return $this->hasMany(PurchaseReturn::class); }
 
