@@ -84,13 +84,15 @@ class TruckPurchaseController extends Controller
 
         $nextConsignmentNo = TruckConsignment::generateNextConsignmentNo();
 
-        $savedTrucks = TruckConsignment::select('truck_no', 'driver_name', 'driver_phone', 'transporter_name')
+        $savedTrucks = TruckConsignment::select('id', 'truck_no', 'driver_name', 'driver_phone', 'transporter_name')
             ->whereNotNull('truck_no')
             ->where('truck_no', '!=', '')
-            ->distinct()
             ->orderByDesc('id')
-            ->limit(50)
-            ->get();
+            ->limit(100)
+            ->get()
+            ->unique('truck_no')
+            ->take(50)
+            ->values();
 
         return view('admin_panel.purchase.truck.create', compact(
             'vendors',

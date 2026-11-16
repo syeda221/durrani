@@ -646,9 +646,13 @@
                                             <label class="form-label-pro text-uppercase fw-bold text-muted" style="font-size:11px;">Item Code Series</label>
                                             <div class="input-group input-group-sm">
                                                 <select class="form-select text-white fw-bold" name="item_code_prefix" style="max-width: 100px; background-color: #0ea5e9; border: 1px solid #0ea5e9; cursor: pointer; padding-left: 8px; padding-right: 24px;" id="itemCodePrefixDropdown" onchange="updateNextNumber()">
-                                                    @foreach($itemCodeSeries as $series)
-                                                        <option value="{{ $series->prefix }}" data-next="{{ $series->prefix }}{{ str_pad($series->next_number, 4, '0', STR_PAD_LEFT) }}" {{ $series->is_default ? 'selected' : '' }}>{{ trim($series->prefix, '-') }}</option>
-                                                    @endforeach
+                                                    @if(isset($itemCodeSeries) && count($itemCodeSeries) > 0)
+                                                        @foreach($itemCodeSeries as $series)
+                                                            <option value="{{ $series->prefix }}" data-next="{{ $series->prefix }}{{ str_pad($series->next_number, 4, '0', STR_PAD_LEFT) }}" {{ ($series->is_default || $loop->first) ? 'selected' : '' }}>{{ trim($series->prefix, '-') ?: $series->prefix }}</option>
+                                                        @endforeach
+                                                    @else
+                                                        <option value="ITEM-" data-next="ITEM-0001" selected>ITEM</option>
+                                                    @endif
                                                 </select>
                                                 <input type="text" class="form-control text-center fw-bold text-dark" id="itemCodePreview" name="item_code_number" readonly placeholder="Auto" style="border-color: #0ea5e9; border-left: none;">
                                                 <button class="btn btn-light" style="border: 1px solid #0ea5e9; border-left: none; color: #475569;" type="button" title="Edit Number" onclick="document.getElementById('itemCodePreview').removeAttribute('readonly'); document.getElementById('itemCodePreview').focus();">
@@ -1044,6 +1048,24 @@
             // AJAX Submission
             form.addEventListener('submit', function(e) {
                 e.preventDefault();
+
+                // Ensure at least one variant row exists
+                if (variantsBody && variantsBody.children.length === 0) {
+                    addBaseVariantRow();
+                }
+
+                if (variantMode === 'weight' && variantsContainer && !variantsContainer.classList.contains('d-none')) {
+                    const factors = Array.from(document.querySelectorAll('input[name="variant_conv_factor[]"]')).map(el => parseFloat(el.value));
+                    const uniqueFactors = new Set(factors);
+                    if (factors.length !== uniqueFactors.size) {
+                        Swal.fire({icon: 'error', title: 'Validation Error', text: 'A variant with the same Conv Factor already exists.'});
+                        return;
+                    }
+                    if (factors.some(f => f <= 0 || isNaN(f))) {
+                        Swal.fire({icon: 'error', title: 'Validation Error', text: 'Conv Factor must be greater than 0.'});
+                        return;
+                    }
+                }
 
                 // --- Sync Variants data to hidden main fields for backend compatibility ---
                 const vStocks = document.querySelectorAll('input[name="variant_stock[]"]');
@@ -1744,6 +1766,8 @@
                 const isWeight = (mode === 'by_kg' || mode === 'by_gm' || mode === 'by_ton' || mode === 'by_meter' || mode === 'by_feet');
                 const isCarton = (mode === 'by_cartons' || mode === 'by_box');
                 const isBox = (mode === 'by_box');
+                const isCustom = mode && mode.startsWith('by_custom_');
+                const customUnitName = isCustom ? (unitDropdown.options[unitDropdown.selectedIndex]?.getAttribute('data-unit-name') || 'Unit') : '';
 
                 const headerEl = document.getElementById('convFactorHeader');
                 if (headerEl) {
@@ -1893,23 +1917,7 @@
                 }
             });
 
-            // Prevent duplicate Conv Factors on form submit
-            form.addEventListener('submit', function(e) {
-                if (variantMode === 'weight' && !variantsContainer.classList.contains('d-none')) {
-                    const factors = Array.from(document.querySelectorAll('input[name="variant_conv_factor[]"]')).map(el => parseFloat(el.value));
-                    const uniqueFactors = new Set(factors);
-                    if (factors.length !== uniqueFactors.size) {
-                        e.preventDefault();
-                        Swal.fire({icon: 'error', title: 'Validation Error', text: 'A variant with the same Conv Factor already exists.'});
-                        return;
-                    }
-                    if (factors.some(f => f <= 0 || isNaN(f))) {
-                        e.preventDefault();
-                        Swal.fire({icon: 'error', title: 'Validation Error', text: 'Conv Factor must be greater than 0.'});
-                        return;
-                    }
-                }
-            });
+
         });
         // ============================================================
         //  MOBILE VARIANT CARDS SYSTEM

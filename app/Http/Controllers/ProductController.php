@@ -1679,8 +1679,11 @@ class ProductController extends Controller
         $userId = Auth::id();
 
         // Auto item_code
-        $prefix = $request->input('item_code_prefix', 'ITEM-');
-        $number = $request->input('item_code_number');
+        $prefix = trim((string) $request->input('item_code_prefix', 'ITEM-'));
+        if (empty($prefix)) {
+            $prefix = 'ITEM-';
+        }
+        $number = trim((string) $request->input('item_code_number', ''));
 
         if (!empty($number)) {
             $nextCode = str_starts_with($number, $prefix) ? $number : $prefix . $number;

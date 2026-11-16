@@ -1338,6 +1338,8 @@
                 const isWeight = (mode === 'by_kg' || mode === 'by_gm' || mode === 'by_ton' || mode === 'by_meter' || mode === 'by_feet');
                 const isCarton = (mode === 'by_cartons' || mode === 'by_box');
                 const isBox = (mode === 'by_box');
+                const isCustom = mode && mode.startsWith('by_custom_');
+                const customUnitName = isCustom ? (unitDropdown.options[unitDropdown.selectedIndex]?.getAttribute('data-unit-name') || 'Unit') : '';
 
                 const headerEl = document.getElementById('convFactorHeader');
                 if (headerEl) {
