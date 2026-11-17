@@ -420,7 +420,9 @@
                             @forelse($consignment->sales as $sale)
                                 <tr>
                                     <td>
-                                        <span class="fw-bold font-monospace text-primary">{{ $sale->invoice_no }}</span>
+                                        <a href="{{ route('sales.invoice', $sale->id) }}" target="_blank" class="fw-bold font-monospace text-primary text-decoration-none">
+                                            {{ $sale->invoice_no }}
+                                        </a>
                                     </td>
                                     <td>
                                         <div class="fw-bold text-dark">{{ $sale->customer_relation->customer_name ?? $sale->customer_relation->name ?? 'Walk-in Customer' }}</div>
@@ -447,7 +449,7 @@
                                         Rs. {{ number_format($sale->total_net, 2) }}
                                     </td>
                                     <td class="text-center">
-                                        <a href="{{ url('sale/'.$sale->id) }}" target="_blank" class="btn btn-sm btn-outline-primary" title="View Sale Invoice">
+                                        <a href="{{ route('sales.invoice', $sale->id) }}" target="_blank" class="btn btn-sm btn-outline-primary" title="View Sale Invoice">
                                             <i class="fas fa-print me-1"></i> Print Bill
                                         </a>
                                     </td>
