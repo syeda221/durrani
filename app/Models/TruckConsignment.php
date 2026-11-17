@@ -44,6 +44,52 @@ class TruckConsignment extends Model
     }
 
     /**
+     * Financial & Profitability Accessors
+     */
+    public function getTotalPurchaseCostAttribute(): float
+    {
+        return (float) $this->purchases->sum('net_amount');
+    }
+
+    public function getTotalSalesRevenueAttribute(): float
+    {
+        return (float) $this->sales->sum('total_net');
+    }
+
+    public function getSoldGoodsCostAttribute(): float
+    {
+        return (float) $this->items->sum(function ($item) {
+            return (float) $item->sold_qty * (float) $item->purchase_price;
+        });
+    }
+
+    public function getRealizedProfitAttribute(): float
+    {
+        return (float) ($this->total_sales_revenue - $this->sold_goods_cost);
+    }
+
+    public function getProfitMarginPercentAttribute(): float
+    {
+        $revenue = $this->total_sales_revenue;
+        if ($revenue <= 0) return 0;
+        return round(($this->realized_profit / $revenue) * 100, 1);
+    }
+
+    public function getRemainingStockValueAttribute(): float
+    {
+        return (float) $this->items->sum(function ($item) {
+            return (float) $item->remaining_qty * (float) $item->purchase_price;
+        });
+    }
+
+    public function getUnloadedStockValueAttribute(): float
+    {
+        return (float) $this->items->sum(function ($item) {
+            return (float) $item->unloaded_qty * (float) $item->purchase_price;
+        });
+    }
+
+    /**
      * Generate next consignment reference number, e.g. TRK-202611-0001
      */
     public static function generateNextConsignmentNo(): string

@@ -30,7 +30,7 @@ class TruckPurchaseController extends Controller
      */
     public function index(Request $request)
     {
-        $query = TruckConsignment::with(['warehouse', 'purchases.vendor', 'items.product', 'items.vendor'])
+        $query = TruckConsignment::with(['warehouse', 'purchases.vendor', 'items.product', 'items.vendor', 'sales'])
             ->withCount(['purchases', 'sales']);
 
         if ($request->filled('truck_no')) {
@@ -57,6 +57,10 @@ class TruckPurchaseController extends Controller
             ->orderByDesc('id')
             ->paginate(15);
 
+        $totalSales = (float) Sale::whereNotNull('truck_consignment_id')->sum('total_net');
+        $soldCost = (float) TruckConsignmentItem::selectRaw('SUM(sold_qty * purchase_price) as total_cogs')->value('total_cogs');
+        $totalProfit = $totalSales - $soldCost;
+
         $stats = [
             'total_consignments' => TruckConsignment::count(),
             'in_transit'         => TruckConsignment::where('status', 'in_transit')->count(),
@@ -64,6 +68,8 @@ class TruckPurchaseController extends Controller
             'remaining_units'    => (float) TruckConsignmentItem::whereHas('consignment', function ($q) {
                 $q->where('status', 'in_transit');
             })->sum('remaining_qty'),
+            'total_sales'        => $totalSales,
+            'total_profit'       => $totalProfit,
         ];
 
         return view('admin_panel.purchase.truck.index', compact('consignments', 'stats'));
@@ -524,6 +530,18 @@ class TruckPurchaseController extends Controller
                     $totalPieces += $sellQty;
                     $itemsCount++;
 
+                    $product = $truckItem->product;
+                    $itemColor = null;
+                    if ($product && !empty($product->color)) {
+                        $parsed = json_decode($product->color, true);
+                        if (is_array($parsed) && count($parsed) > 0) {
+                            $baseVar = collect($parsed)->firstWhere('is_base_variant', 1) 
+                                ?: collect($parsed)->firstWhere('conv_factor', 1) 
+                                ?: $parsed[0];
+                            $itemColor = base64_encode(json_encode($baseVar));
+                        }
+                    }
+
                     // Create SaleItem
                     SaleItem::create([
                         'sale_id'                   => $sale->id,
@@ -533,6 +551,7 @@ class TruckPurchaseController extends Controller
                         'vendor_id'                 => $truckItem->vendor_id,
                         'product_id'                => $truckItem->product_id,
                         'product_name'              => $truckItem->product->item_name ?? 'Product #'.$truckItem->product_id,
+                        'color'                     => $itemColor,
                         'qty'                       => $sellQty,
                         'total_pieces'              => $sellQty,
                         'delivered_qty'             => $sellQty,

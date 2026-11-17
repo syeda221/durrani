@@ -315,7 +315,12 @@ class ReportingController extends Controller
                         }
                     }
                 }
-                foreach ($parsedVariants as $v) {
+                $hasBaseVar = collect($parsedVariants)->contains(function ($item) {
+                    return !empty($item['is_base_variant']) || (isset($item['conv_factor']) && (float)$item['conv_factor'] == 1);
+                });
+
+                foreach ($parsedVariants as $vIdx => $v) {
+                    $isDefaultVariant = (!$hasBaseVar && $vIdx === 0);
                     $vName = $v['name'] ?? $product->item_name;
                     $vSize = $v['size'] ?? '-';
                     $vColor = $v['color'] ?? '-';
@@ -376,7 +381,7 @@ class ReportingController extends Controller
                         // Purchased for variant
                         $purchased = 0; $purchaseAmount = 0;
                         foreach ($purchasesList as $pItem) {
-                            if ($this->matchSaleItemToVariant($pItem, $v)) {
+                            if ($this->matchSaleItemToVariant($pItem, $v, $isDefaultVariant)) {
                                 $pUnit = strtolower(trim($pItem->unit ?? ''));
                                 $pPPB = (float) ($pItem->pieces_per_box > 0 ? $pItem->pieces_per_box : $ppb);
                                 if ($pPPB <= 0) $pPPB = 1;
@@ -402,7 +407,7 @@ class ReportingController extends Controller
                         // Purchase Returned for variant
                         $pReturned = 0; $pReturnAmount = 0;
                         foreach ($purchaseReturnsList as $prItem) {
-                            if ($this->matchSaleItemToVariant($prItem, $v)) {
+                            if ($this->matchSaleItemToVariant($prItem, $v, $isDefaultVariant)) {
                                 $pReturned += (float) $prItem->qty;
                                 $pReturnAmount += (float) $prItem->line_total;
                             }
@@ -411,7 +416,7 @@ class ReportingController extends Controller
                         // Sold for variant
                         $sold = 0; $saleAmount = 0;
                         foreach ($salesList as $sItem) {
-                            if ($this->matchSaleItemToVariant($sItem, $v)) {
+                            if ($this->matchSaleItemToVariant($sItem, $v, $isDefaultVariant)) {
                                 $sold += (float) $sItem->total_pieces;
                                 $saleAmount += (float) $sItem->total;
                             }
@@ -426,7 +431,7 @@ class ReportingController extends Controller
                                 $rColor = !empty($saleColors) ? $saleColors[0] : '';
                             }
                             $rItemCopy = (object)['qty' => $rItem->qty, 'color' => $rColor];
-                            if ($this->matchSaleItemToVariant($rItemCopy, $v)) {
+                            if ($this->matchSaleItemToVariant($rItemCopy, $v, $isDefaultVariant)) {
                                 $returnedQty += (float) $rItem->qty;
                             }
                         }
@@ -829,6 +834,9 @@ class ReportingController extends Controller
         $start = $request->start_date ?: now()->startOfDay()->toDateTimeString();
         $end = $request->end_date ?: now()->endOfDay()->toDateTimeString();
 
+        $start = str_replace('T', ' ', $start);
+        $end = str_replace('T', ' ', $end);
+
         if (strlen($start) === 10) {
             $start .= ' 00:00:00';
         } elseif (strlen($start) === 16) {
@@ -848,6 +856,27 @@ class ReportingController extends Controller
         $productsQuery = Product::query();
         if ($productId && $productId !== 'all') {
             $productsQuery->where('id', $productId);
+        } else {
+            // Performance optimization: only load products that have activity in the date range
+            $soldProdIds = DB::table('sale_items')
+                ->join('sales', 'sales.id', '=', 'sale_items.sale_id')
+                ->whereBetween('sales.created_at', [$start, $end]);
+            if ($customerId && $customerId !== 'all') {
+                $soldProdIds->where('sales.customer_id', $customerId);
+            }
+            $activePids = $soldProdIds->pluck('sale_items.product_id')->filter()->unique()->toArray();
+
+            $retProdIds = DB::table('sale_return_items')
+                ->join('sale_returns', 'sale_returns.id', '=', 'sale_return_items.sale_return_id')
+                ->whereBetween('sale_returns.created_at', [$start, $end])
+                ->pluck('sale_return_items.product_id')->filter()->unique()->toArray();
+
+            $allPids = array_unique(array_merge($activePids, $retProdIds));
+            if (!empty($allPids)) {
+                $productsQuery->whereIn('id', $allPids);
+            } else {
+                $productsQuery->whereRaw('1 = 0');
+            }
         }
         if ($categoryId && $categoryId !== 'all') {
             $productsQuery->where('category_id', $categoryId);
@@ -911,6 +940,7 @@ class ReportingController extends Controller
                     'sale_items.total_pieces',
                     'sale_items.qty',
                     'sale_items.total',
+                    'sale_items.purchase_price',
                     'sale_items.color',
                     'sales.total_extradiscount',
                     'sales.total_bill_amount'
@@ -958,7 +988,7 @@ class ReportingController extends Controller
                     ->leftJoin('sale_items as si', 'si.id', '=', 'dci.sale_item_id')
                     ->leftJoin('sales', 'sales.id', '=', 'dc.sale_id')
                     ->leftJoin('sales as s_inv', 's_inv.id', '=', 'dc.invoice_id')
-                    ->where('dci.product_id', $p->id ?? $product->id)
+                    ->where('dci.product_id', $product->id)
                     ->where(function($q) {
                         $q->whereNull('dc.sale_id')
                           ->orWhere('sales.sale_type', '=', 'sales_order');
@@ -973,7 +1003,10 @@ class ReportingController extends Controller
                 foreach ($dcList as $dcItem) {
                     $salesListArray[] = (object) [
                         'total_pieces' => $dcItem->total_pieces,
+                        'qty' => $dcItem->total_pieces,
                         'total' => 0, // DCs don't hold price natively in this array
+                        'total_extradiscount' => 0,
+                        'total_bill_amount' => 0,
                         'color' => $dcItem->color
                     ];
                 }
@@ -1002,7 +1035,12 @@ class ReportingController extends Controller
                     }
                 }
 
-                foreach ($parsedVariants as $v) {
+                $hasBaseVar = collect($parsedVariants)->contains(function ($item) {
+                    return !empty($item['is_base_variant']) || (isset($item['conv_factor']) && (float)$item['conv_factor'] == 1);
+                });
+
+                foreach ($parsedVariants as $vIdx => $v) {
+                    $isDefaultVariant = (!$hasBaseVar && $vIdx === 0);
                     $vName = $v['name'] ?? $product->item_name;
                     $vSize = $v['size'] ?? '-';
                     $vColor = $v['color'] ?? '-';
@@ -1049,17 +1087,28 @@ class ReportingController extends Controller
                     $soldQty = 0;
                     $soldQtyPieces = 0;
                     $soldAmount = 0;
+                    $explicitCogs = 0;
+                    $hasExplicitCogs = false;
                     foreach ($salesList as $sItem) {
-                        if ($this->matchSaleItemToVariant($sItem, $v)) {
-                            $soldQty += (float) $sItem->qty;
-                            $soldQtyPieces += (float) $sItem->total_pieces;
+                        if ($this->matchSaleItemToVariant($sItem, $v, $isDefaultVariant)) {
+                            $itemQty = isset($sItem->qty) ? (float) $sItem->qty : (float) ($sItem->total_pieces ?? 0);
+                            $itemPieces = isset($sItem->total_pieces) ? (float) $sItem->total_pieces : $itemQty;
+                            $soldQty += $itemQty;
+                            $soldQtyPieces += $itemPieces;
                             
-                            $itemNet = (float) $sItem->total;
-                            if ($sItem->total_bill_amount > 0 && $sItem->total_extradiscount > 0) {
-                                $proportion = $itemNet / (float) $sItem->total_bill_amount;
-                                $itemNet -= ($sItem->total_extradiscount * $proportion);
+                            $itemNet = (float) ($sItem->total ?? 0);
+                            $billAmt = (float) ($sItem->total_bill_amount ?? 0);
+                            $extraDisc = (float) ($sItem->total_extradiscount ?? 0);
+                            if ($billAmt > 0 && $extraDisc > 0) {
+                                $proportion = $itemNet / $billAmt;
+                                $itemNet -= ($extraDisc * $proportion);
                             }
                             $soldAmount += $itemNet;
+
+                            if (isset($sItem->purchase_price) && (float)$sItem->purchase_price > 0) {
+                                $explicitCogs += $itemPieces * (float)$sItem->purchase_price;
+                                $hasExplicitCogs = true;
+                            }
                         }
                     }
 
@@ -1075,13 +1124,19 @@ class ReportingController extends Controller
                             'qty' => $rItem->qty,
                             'color' => $rColor
                         ];
-                        if ($this->matchSaleItemToVariant($rItemCopy, $v)) {
+                        if ($this->matchSaleItemToVariant($rItemCopy, $v, $isDefaultVariant)) {
                             $returnedQtyPieces += (float) $rItem->qty;
                             $returnedAmount += (float) $rItem->line_total;
                         }
                     }
 
-                    $vAveragePrice = (float) ($v['purch_price'] ?? $productPurchPrice);
+                    $vAveragePrice = (float) ($v['purch_price'] ?? 0);
+                    if ($vAveragePrice <= 0) {
+                        $vAveragePrice = (float) ($averagePrice > 0 ? $averagePrice : $productPurchPrice);
+                    }
+                    if ($vAveragePrice <= 0 && $hasExplicitCogs && $soldQtyPieces > 0) {
+                        $vAveragePrice = $explicitCogs / $soldQtyPieces;
+                    }
                     $netSoldAmount = $soldAmount - $returnedAmount;
                     $netQtyPieces = $soldQtyPieces - $returnedQtyPieces;
                     $costQty = $netQtyPieces;
@@ -1200,6 +1255,7 @@ class ReportingController extends Controller
                     'sale_items.total_pieces',
                     'sale_items.qty',
                     'sale_items.total',
+                    'sale_items.purchase_price',
                     'sales.total_extradiscount',
                     'sales.total_bill_amount'
                 )->get();
@@ -1207,16 +1263,27 @@ class ReportingController extends Controller
                 $soldQty = 0;
                 $soldQtyPieces = 0;
                 $soldAmount = 0;
+                $explicitCogs = 0;
+                $hasExplicitCogs = false;
                 foreach ($salesList as $sItem) {
-                    $soldQty += (float) $sItem->qty;
-                    $soldQtyPieces += (float) $sItem->total_pieces;
+                    $itemQty = isset($sItem->qty) ? (float) $sItem->qty : (float) ($sItem->total_pieces ?? 0);
+                    $itemPieces = isset($sItem->total_pieces) ? (float) $sItem->total_pieces : $itemQty;
+                    $soldQty += $itemQty;
+                    $soldQtyPieces += $itemPieces;
                     
-                    $itemNet = (float) $sItem->total;
-                    if ($sItem->total_bill_amount > 0 && $sItem->total_extradiscount > 0) {
-                        $proportion = $itemNet / (float) $sItem->total_bill_amount;
-                        $itemNet -= ($sItem->total_extradiscount * $proportion);
+                    $itemNet = (float) ($sItem->total ?? 0);
+                    $billAmt = (float) ($sItem->total_bill_amount ?? 0);
+                    $extraDisc = (float) ($sItem->total_extradiscount ?? 0);
+                    if ($billAmt > 0 && $extraDisc > 0) {
+                        $proportion = $itemNet / $billAmt;
+                        $itemNet -= ($extraDisc * $proportion);
                     }
                     $soldAmount += $itemNet;
+
+                    if (isset($sItem->purchase_price) && (float)$sItem->purchase_price > 0) {
+                        $explicitCogs += $itemPieces * (float)$sItem->purchase_price;
+                        $hasExplicitCogs = true;
+                    }
                 }
                 
                 $returnQuery = DB::table('sale_return_items as sri')
@@ -1235,9 +1302,14 @@ class ReportingController extends Controller
                     $returnedAmount += (float) $rItem->line_total;
                 }
 
+                $effectiveAveragePrice = $averagePrice > 0 ? $averagePrice : $productPurchPrice;
+                if ($effectiveAveragePrice <= 0 && $hasExplicitCogs && $soldQtyPieces > 0) {
+                    $effectiveAveragePrice = $explicitCogs / $soldQtyPieces;
+                }
+
                 $netSoldAmount = $soldAmount - $returnedAmount;
                 $netQtyPieces = $soldQtyPieces - $returnedQtyPieces;
-                $costOfGoodsSold = $netQtyPieces * $averagePrice;
+                $costOfGoodsSold = $netQtyPieces * $effectiveAveragePrice;
                 $grossProfit = $netSoldAmount - $costOfGoodsSold;
 
                 if ($soldQtyPieces > 0 || $returnedQtyPieces > 0) {
@@ -1416,7 +1488,13 @@ class ReportingController extends Controller
         $totalExpenses = $expenseQueryV1->sum('total_amount') + $expenseQueryV2->sum('total_amount');
 
         // 4. Top 10 Customers by Profit
-        $allCustomers = DB::table('customers')->get();
+        $activeCustomerIds = DB::table('sales')
+            ->whereBetween('created_at', [$start, $end]);
+        if ($customerId && $customerId !== 'all') {
+            $activeCustomerIds->where('customer_id', $customerId);
+        }
+        $activeCustomerIds = $activeCustomerIds->pluck('customer_id')->filter()->unique()->toArray();
+        $allCustomers = !empty($activeCustomerIds) ? DB::table('customers')->whereIn('id', $activeCustomerIds)->get() : collect();
         $customerProfits = [];
 
         $balanceService = app(\App\Services\BalanceService::class);
@@ -3100,11 +3178,13 @@ class ReportingController extends Controller
     /**
      * Match a sale item to a specific variant based on size and color stored in color field.
      */
-    private function matchSaleItemToVariant($saleItem, $variant)
+    private function matchSaleItemToVariant($saleItem, $variant, $isDefaultVariant = false)
     {
-        $itemColor = $saleItem->color;
+        $itemColor = $saleItem->color ?? null;
         if (empty($itemColor)) {
-            return false;
+            return !empty($variant['is_base_variant']) 
+                || (isset($variant['conv_factor']) && (float)$variant['conv_factor'] == 1)
+                || $isDefaultVariant;
         }
 
         $itemVariant = [];

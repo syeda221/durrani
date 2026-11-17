@@ -255,16 +255,20 @@
             </div>
         </div>
 
-        {{-- Completed Trips --}}
+        {{-- Route Sales & Profit --}}
         <div class="col-xl-3 col-sm-6">
             <div class="stat-card-pro d-flex align-items-center justify-content-between" style="border-left: 3px solid #10b981;">
                 <div>
-                    <span class="text-muted small fw-semibold text-uppercase tracking-wider">Offloaded & Done</span>
-                    <h3 class="fw-bold text-success mt-1 mb-0">{{ $stats['completed'] ?? 0 }}</h3>
-                    <div class="text-muted small mt-1">Trip completed & closed</div>
+                    <span class="text-muted small fw-semibold text-uppercase tracking-wider">Route Sales & Profit (منافع)</span>
+                    <h3 class="fw-bold text-success font-monospace mt-1 mb-0">
+                        + Rs. {{ number_format($stats['total_profit'] ?? 0, 0) }}
+                    </h3>
+                    <div class="text-muted small mt-1">
+                        Sales: <strong class="text-dark">Rs. {{ number_format($stats['total_sales'] ?? 0, 0) }}</strong>
+                    </div>
                 </div>
                 <div class="stat-icon bg-success bg-opacity-10 text-success">
-                    <i class="fas fa-check-double"></i>
+                    <i class="fas fa-chart-line"></i>
                 </div>
             </div>
         </div>
@@ -324,8 +328,8 @@
                         <th style="width: 14%;">Driver Details</th>
                         <th style="width: 12%;">Status</th>
                         <th style="width: 18%;">Stock (Remaining / Loaded)</th>
-                        <th style="width: 13%;">Vendors Loaded</th>
-                        <th style="width: 14%;" class="text-end">Total Amount</th>
+                        <th style="width: 12%;">Vendors Loaded</th>
+                        <th style="width: 15%;" class="text-end">Cost & Sales (Profit)</th>
                         <th style="width: 10%;" class="text-center">Actions</th>
                     </tr>
                 </thead>
@@ -429,14 +433,24 @@
                                 </div>
                             </td>
 
-                            {{-- Total Net Amount --}}
+                            {{-- Total Cost & Sales / Profit --}}
                             <td class="text-end">
-                                <div class="fw-bold text-dark font-monospace fs-6">
-                                    Rs. {{ number_format($totalAmount, 2) }}
+                                <div class="fw-bold text-dark font-monospace" style="font-size: 0.88rem;">
+                                    Cost: Rs. {{ number_format($totalAmount, 0) }}
                                 </div>
-                                <div class="text-muted small" style="font-size: 0.72rem;">
-                                    {{ $c->purchases_count }} Bills Generated
-                                </div>
+                                @if($c->sales_count > 0)
+                                    <div class="text-muted small mt-1 font-monospace" style="font-size: 0.75rem;">
+                                        Sale: <strong class="text-dark">Rs. {{ number_format($c->total_sales_revenue, 0) }}</strong>
+                                    </div>
+                                    <div class="mt-1">
+                                        <span class="badge {{ $c->realized_profit >= 0 ? 'bg-success-subtle text-success border border-success' : 'bg-danger-subtle text-danger border border-danger' }} px-2 py-1 font-monospace" style="font-size: 0.72rem;">
+                                            <i class="fas {{ $c->realized_profit >= 0 ? 'fa-arrow-up' : 'fa-arrow-down' }} me-1"></i>
+                                            Profit: Rs. {{ number_format($c->realized_profit, 0) }} ({{ $c->profit_margin_percent }}%)
+                                        </span>
+                                    </div>
+                                @else
+                                    <div class="text-muted small mt-1" style="font-size: 0.72rem;">No route sales yet</div>
+                                @endif
                             </td>
 
                             {{-- Actions --}}

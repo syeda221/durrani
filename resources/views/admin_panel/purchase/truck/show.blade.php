@@ -276,11 +276,81 @@
         @endif
     </div>
 
+    @php
+        $truckCost = $consignment->total_purchase_cost;
+        $truckSales = $consignment->total_sales_revenue;
+        $truckSoldCost = $consignment->sold_goods_cost;
+        $truckProfit = $consignment->realized_profit;
+        $truckMargin = $consignment->profit_margin_percent;
+        $truckRemainingValue = $consignment->remaining_stock_value;
+        $truckUnloadedValue = $consignment->unloaded_stock_value;
+    @endphp
+
+    {{-- TRUCK PROFITABILITY & FINANCIAL OVERVIEW CARDS --}}
+    <div class="row g-3 mb-4">
+        {{-- Total Loaded Cost --}}
+        <div class="col-xl-3 col-sm-6">
+            <div class="card border-0 shadow-sm rounded-3 p-3 bg-white h-100" style="border-left: 4px solid #64748b !important;">
+                <div class="text-muted small fw-bold text-uppercase" style="font-size: 0.72rem;">Total Loaded Cost (خرید لاگت)</div>
+                <div class="fs-4 fw-bold font-monospace text-dark mt-1">Rs. {{ number_format($truckCost, 2) }}</div>
+                <div class="text-muted small mt-1">
+                    Kiraya (Freight): <span class="fw-semibold text-dark">Rs. {{ number_format($consignment->total_freight, 0) }}</span>
+                </div>
+            </div>
+        </div>
+
+        {{-- Direct Route Sales --}}
+        <div class="col-xl-3 col-sm-6">
+            <div class="card border-0 shadow-sm rounded-3 p-3 bg-white h-100" style="border-left: 4px solid #0284c7 !important;">
+                <div class="text-muted small fw-bold text-uppercase" style="font-size: 0.72rem;">Direct Route Sales (فروخت آمدن)</div>
+                <div class="fs-4 fw-bold font-monospace text-primary mt-1">Rs. {{ number_format($truckSales, 2) }}</div>
+                <div class="text-muted small mt-1">
+                    {{ $consignment->sales->count() }} Invoices Delivered on Route
+                </div>
+            </div>
+        </div>
+
+        {{-- Realized Direct Profit --}}
+        <div class="col-xl-3 col-sm-6">
+            <div class="card border-0 shadow-sm rounded-3 p-3 bg-white h-100" style="border-left: 4px solid {{ $truckProfit >= 0 ? '#10b981' : '#ef4444' }} !important;">
+                <div class="text-muted small fw-bold text-uppercase" style="font-size: 0.72rem;">Route Sales Profit (خالص منافع)</div>
+                <div class="fs-4 fw-bold font-monospace {{ $truckProfit >= 0 ? 'text-success' : 'text-danger' }} mt-1">
+                    {{ $truckProfit >= 0 ? '+' : '' }} Rs. {{ number_format($truckProfit, 2) }}
+                </div>
+                <div class="text-muted small mt-1 d-flex align-items-center gap-2">
+                    <span class="badge {{ $truckProfit >= 0 ? 'bg-success-subtle text-success border border-success' : 'bg-danger-subtle text-danger border border-danger' }} fw-bold">
+                        Margin: {{ $truckMargin }}%
+                    </span>
+                    <span class="text-muted" style="font-size: 0.73rem;">Sold Cost: Rs. {{ number_format($truckSoldCost, 0) }}</span>
+                </div>
+            </div>
+        </div>
+
+        {{-- Remaining / Unloaded Stock Asset --}}
+        <div class="col-xl-3 col-sm-6">
+            <div class="card border-0 shadow-sm rounded-3 p-3 bg-white h-100" style="border-left: 4px solid #f59e0b !important;">
+                <div class="text-muted small fw-bold text-uppercase" style="font-size: 0.72rem;">Stock Asset Value (باقی مال کی مالیت)</div>
+                <div class="fs-4 fw-bold font-monospace text-warning mt-1">
+                    Rs. {{ number_format($truckRemainingValue + $truckUnloadedValue, 2) }}
+                </div>
+                <div class="text-muted small mt-1" style="font-size: 0.73rem;">
+                    <span>Truck: <strong>Rs. {{ number_format($truckRemainingValue, 0) }}</strong></span> | 
+                    <span>Unloaded: <strong>Rs. {{ number_format($truckUnloadedValue, 0) }}</strong></span>
+                </div>
+            </div>
+        </div>
+    </div>
+
     {{-- NAVIGATION TABS --}}
     <ul class="nav nav-tabs nav-tabs-erp mb-3" id="truckTabs" role="tablist">
         <li class="nav-item">
             <a class="nav-link active" id="balance-tab" data-bs-toggle="tab" href="#balancePane" role="tab">
                 <i class="fas fa-scale-balanced me-1"></i> Live Truck Stock Balance (ٹرک میں موجود مال)
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" id="profit-tab" data-bs-toggle="tab" href="#profitPane" role="tab">
+                <i class="fas fa-chart-pie text-success me-1"></i> 💰 Truck Profit & Loss (نفع و نقصان کی رپورٹ)
             </a>
         </li>
         <li class="nav-item">
@@ -383,6 +453,149 @@
                         </tfoot>
                     </table>
                 </div>
+            </div>
+        </div>
+
+        {{-- TAB: TRUCK PROFIT & LOSS STATEMENT --}}
+        <div class="tab-pane fade" id="profitPane" role="tabpanel">
+            <div class="erp-card shadow-sm mb-4">
+                <div class="erp-card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
+                    <div>
+                        <h6 class="mb-0 fw-bold text-dark d-flex align-items-center gap-2">
+                            <i class="fas fa-chart-line text-success"></i>
+                            Truck Profit & Loss Breakdown (ٹرک کا نفع و نقصان)
+                        </h6>
+                        <small class="text-muted">Item-by-item analysis: Purchase Cost, Sold Revenue, Realized Profit, and Remaining Stock Asset.</small>
+                    </div>
+                    <span class="badge {{ $truckProfit >= 0 ? 'bg-success' : 'bg-danger' }} fs-6 px-3 py-2 font-monospace">
+                        Net Route Profit: {{ $truckProfit >= 0 ? '+' : '' }} Rs. {{ number_format($truckProfit, 2) }}
+                    </span>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="table table-hover table-detail align-middle mb-0">
+                        <thead>
+                            <tr>
+                                <th style="width: 4%;" class="text-center">#</th>
+                                <th style="width: 22%;">Product Description</th>
+                                <th style="width: 12%;">Vendor</th>
+                                <th style="width: 10%;" class="text-end">Pur. Cost</th>
+                                <th style="width: 10%;" class="text-center">Loaded / Sold</th>
+                                <th style="width: 11%;" class="text-end">Sale Revenue</th>
+                                <th style="width: 10%;" class="text-end">COGS (خرید)</th>
+                                <th style="width: 11%;" class="text-end bg-success-subtle text-success fw-bold">Profit (منافع)</th>
+                                <th style="width: 10%;" class="text-end">Stock Value</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @php
+                                $sumLoadedCost = 0;
+                                $sumSoldRevenue = 0;
+                                $sumSoldCost = 0;
+                                $sumProfit = 0;
+                                $sumStockAsset = 0;
+                            @endphp
+                            @forelse($consignment->items as $idx => $tItem)
+                                @php
+                                    $cost = (float) $tItem->purchase_price;
+                                    $loadedQty = (float) $tItem->loaded_qty;
+                                    $soldQty = (float) $tItem->sold_qty;
+                                    $remainingQty = (float) $tItem->remaining_qty;
+                                    $unloadedQty = (float) $tItem->unloaded_qty;
+
+                                    // Direct revenue from sales matching this truck item
+                                    $itemRevenue = (float) \App\Models\SaleItem::where('truck_consignment_item_id', $tItem->id)->sum('total');
+                                    $itemSoldCost = $soldQty * $cost;
+                                    $itemProfit = $itemRevenue - $itemSoldCost;
+                                    $itemMargin = $itemRevenue > 0 ? round(($itemProfit / $itemRevenue) * 100, 1) : 0;
+                                    $itemStockValue = ($remainingQty + $unloadedQty) * $cost;
+
+                                    $sumLoadedCost += ($loadedQty * $cost);
+                                    $sumSoldRevenue += $itemRevenue;
+                                    $sumSoldCost += $itemSoldCost;
+                                    $sumProfit += $itemProfit;
+                                    $sumStockAsset += $itemStockValue;
+                                @endphp
+                                <tr>
+                                    <td class="text-center text-muted">{{ $idx + 1 }}</td>
+                                    <td>
+                                        <div class="fw-bold text-dark">{{ $tItem->product->item_name ?? 'Product #'.$tItem->product_id }}</div>
+                                        @if(!empty($tItem->product->item_code))
+                                            <span class="text-muted small font-monospace">Code: {{ $tItem->product->item_code }}</span>
+                                        @endif
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-light text-dark border">
+                                            {{ $tItem->vendor->name ?? 'Vendor' }}
+                                        </span>
+                                    </td>
+                                    <td class="text-end font-monospace">
+                                        Rs. {{ number_format($cost, 2) }}
+                                    </td>
+                                    <td class="text-center">
+                                        <div class="font-monospace fw-semibold">{{ $soldQty }} / {{ $loadedQty }}</div>
+                                        <small class="text-muted" style="font-size: 0.72rem;">{{ $tItem->unit ?: 'Pcs' }}</small>
+                                    </td>
+                                    <td class="text-end font-monospace fw-bold text-primary">
+                                        Rs. {{ number_format($itemRevenue, 2) }}
+                                    </td>
+                                    <td class="text-end font-monospace text-muted">
+                                        Rs. {{ number_format($itemSoldCost, 2) }}
+                                    </td>
+                                    <td class="text-end font-monospace fw-bold {{ $itemProfit >= 0 ? 'text-success bg-success-subtle' : 'text-danger bg-danger-subtle' }}">
+                                        <div>{{ $itemProfit >= 0 ? '+' : '' }} Rs. {{ number_format($itemProfit, 2) }}</div>
+                                        @if($itemRevenue > 0)
+                                            <div style="font-size: 0.72rem;">({{ $itemMargin }}%)</div>
+                                        @endif
+                                    </td>
+                                    <td class="text-end font-monospace text-warning fw-semibold">
+                                        Rs. {{ number_format($itemStockValue, 2) }}
+                                    </td>
+                                </tr>
+                            @empty
+                                <tr>
+                                    <td colspan="9" class="text-center py-4 text-muted">No items available.</td>
+                                </tr>
+                            @endforelse
+                        </tbody>
+                        <tfoot class="bg-light fw-bold">
+                            <tr>
+                                <td colspan="5" class="text-end">Consignment Totals:</td>
+                                <td class="text-end font-monospace text-primary fs-6">Rs. {{ number_format($sumSoldRevenue, 2) }}</td>
+                                <td class="text-end font-monospace text-muted fs-6">Rs. {{ number_format($sumSoldCost, 2) }}</td>
+                                <td class="text-end font-monospace {{ $sumProfit >= 0 ? 'text-success bg-success-subtle' : 'text-danger bg-danger-subtle' }} fs-5">
+                                    {{ $sumProfit >= 0 ? '+' : '' }} Rs. {{ number_format($sumProfit, 2) }}
+                                </td>
+                                <td class="text-end font-monospace text-warning fs-6">Rs. {{ number_format($sumStockAsset, 2) }}</td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+
+                {{-- FINANCIAL HIGHLIGHT CARD --}}
+                <div class="p-3 bg-light border-top">
+                    <div class="row g-3 align-items-center">
+                        <div class="col-md-3">
+                            <span class="text-muted small">1. Total Purchases Cost:</span>
+                            <div class="fw-bold font-monospace text-dark fs-6">Rs. {{ number_format($truckCost, 2) }}</div>
+                        </div>
+                        <div class="col-md-3">
+                            <span class="text-muted small">2. Total Direct Sales:</span>
+                            <div class="fw-bold font-monospace text-primary fs-6">Rs. {{ number_format($truckSales, 2) }}</div>
+                        </div>
+                        <div class="col-md-3">
+                            <span class="text-muted small">3. Realized Cash Profit:</span>
+                            <div class="fw-bold font-monospace text-success fs-5">
+                                + Rs. {{ number_format($truckProfit, 2) }} ({{ $truckMargin }}%)
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <span class="text-muted small">4. Stock Value (Truck + Warehouse):</span>
+                            <div class="fw-bold font-monospace text-warning fs-6">Rs. {{ number_format($truckRemainingValue + $truckUnloadedValue, 2) }}</div>
+                        </div>
+                    </div>
+                </div>
+
             </div>
         </div>
 
