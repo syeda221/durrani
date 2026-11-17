@@ -478,7 +478,6 @@ class TruckPurchaseController extends Controller
                 $sale = new Sale();
                 $sale->invoice_no           = $invoiceNo;
                 $sale->customer_id          = $customerId;
-                $sale->customer             = $customer ? $customer->customer_name : '';
                 $sale->warehouse_id         = $whId;
                 $sale->truck_consignment_id = $consignment->id;
                 $sale->reference            = $consignment->consignment_no ?? '';
