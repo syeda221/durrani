@@ -443,6 +443,9 @@ Route::middleware('auth')->group(function () {
     Route::post('sale/return/store', [App\Http\Controllers\SaleReturnController::class, 'processSaleReturn'])->middleware('permission:sales.create')->name('sale.return.store');
 
     Route::get('/sales/{id}/invoice', [SaleController::class, 'saleinvoice'])->middleware('permission:sales.print|sales_orders.print|quotations.print')->name('sales.invoice');
+    Route::get('/sale/{id}', function ($id) {
+        return redirect()->route('sales.invoice', $id);
+    })->middleware('permission:sales.print|sales_orders.print|quotations.print|sales.view');
     Route::get('/sales/{id}/edit', [SaleController::class, 'saleedit'])->middleware('permission:sales.edit|sales_orders.edit|quotations.edit')->name('sales.edit');
     Route::put('/sales/{id}', [SaleController::class, 'updatesale'])->middleware('permission:sales.edit|sales_orders.edit|quotations.edit')->name('sales.update');
     Route::get('/sales/{id}/dc', [SaleController::class, 'saledc'])->middleware('permission:delivery_challans.print|direct_dc.print')->name('sales.dc');
