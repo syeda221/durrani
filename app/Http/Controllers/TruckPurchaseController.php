@@ -468,26 +468,32 @@ class TruckPurchaseController extends Controller
                 InvoiceSeries::incrementCounterForInvoice($invoiceNo);
 
                 $customerId = (int) $request->customer_id;
+                $customer = Customer::find($customerId);
                 $saleDate = $request->sale_date ?: now()->toDateString();
                 $discount = (float) ($request->discount ?? 0);
                 $shipping = (float) ($request->shipping_charges ?? 0);
                 $paidAmount = (float) ($request->paid_amount ?? 0);
+                $whId = $consignment->warehouse_id ?: 1;
 
-                $sale = Sale::create([
-                    'invoice_no'           => $invoiceNo,
-                    'customer_id'          => $customerId,
-                    'warehouse_id'         => $consignment->warehouse_id,
-                    'truck_consignment_id' => $consignment->id,
-                    'sale_status'          => 'posted',
-                    'sale_type'            => 'direct_sale',
-                    'delivery_status'      => 'delivered',
-                    'total_items'          => 0,
-                    'total_bill_amount'    => 0,
-                    'total_net'            => 0,
-                    'cash'                 => $paidAmount,
-                    'comment'              => $request->comment ?: "Direct delivery from Truck #{$consignment->truck_no} (Consignment: {$consignment->consignment_no})",
-                    'created_at'           => $saleDate,
-                ]);
+                $sale = new Sale();
+                $sale->invoice_no           = $invoiceNo;
+                $sale->customer_id          = $customerId;
+                $sale->customer             = $customer ? $customer->customer_name : '';
+                $sale->warehouse_id         = $whId;
+                $sale->truck_consignment_id = $consignment->id;
+                $sale->reference            = $consignment->consignment_no ?? '';
+                $sale->sale_status          = 'posted';
+                $sale->sale_type            = 'direct_sale';
+                $sale->delivery_status      = 'delivered';
+                $sale->total_items          = 0;
+                $sale->total_bill_amount    = 0;
+                $sale->total_net            = 0;
+                $sale->cash                 = $paidAmount;
+                $sale->shipping_charges     = $shipping;
+                $sale->total_extradiscount  = $discount;
+                $sale->comment              = $request->comment ?: "Direct delivery from Truck #{$consignment->truck_no} (Consignment: {$consignment->consignment_no})";
+                $sale->created_at           = \Carbon\Carbon::parse($saleDate)->format('Y-m-d H:i:s');
+                $sale->save();
 
                 $subtotal = 0;
                 $totalPieces = 0;
@@ -519,6 +525,7 @@ class TruckPurchaseController extends Controller
                     // Create SaleItem
                     SaleItem::create([
                         'sale_id'                   => $sale->id,
+                        'warehouse_id'              => $whId,
                         'truck_consignment_id'      => $consignment->id,
                         'truck_consignment_item_id' => $truckItemId,
                         'vendor_id'                 => $truckItem->vendor_id,
@@ -550,7 +557,7 @@ class TruckPurchaseController extends Controller
 
                 // Update Customer Ledger
                 $lastLedger = CustomerLedger::where('customer_id', $customerId)->latest('id')->first();
-                $prevBal = $lastLedger ? (float)$lastLedger->closing_balance : (float)(Customer::find($customerId)->previous_balance ?? 0);
+                $prevBal = $lastLedger ? (float)$lastLedger->closing_balance : (float)($customer->previous_balance ?? 0);
                 $newBal = $prevBal + $totalNet - $paidAmount;
 
                 CustomerLedger::create([
@@ -561,6 +568,11 @@ class TruckPurchaseController extends Controller
                     'closing_balance'  => $newBal,
                     'opening_balance'  => 0,
                 ]);
+
+                if ($customer) {
+                    $customer->previous_balance = $newBal;
+                    $customer->save();
+                }
 
                 return $sale;
             });
@@ -577,6 +589,12 @@ class TruckPurchaseController extends Controller
 
         } catch (\Throwable $e) {
             Log::error("Truck Sale Error: " . $e->getMessage());
+            if ($request->ajax()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => $e->getMessage(),
+                ], 400);
+            }
             return back()->withInput()->with('error', $e->getMessage());
         }
     }
