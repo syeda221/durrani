@@ -487,16 +487,45 @@ $(document).ready(function() {
 
     $('#truckSaleForm').on('submit', function(e) {
         e.preventDefault(); // Prevent default form submission for AJAX handling
-        let totalQty = 0;
-        $('.sell-qty-input').each(function() { totalQty += parseFloat($(this).val()) || 0; });
-        if (totalQty <= 0) {
-            Swal.fire('No Quantity Entered', 'Kam az kam aik product ki deliver quantity enter karein.', 'warning');
+
+        // Validate customer selection
+        const customerId = $('.select2-customer').val();
+        if (!customerId) {
+            Swal.fire('Customer Required', 'Barah-e-karam pehle Customer select karein.', 'warning');
             return false;
         }
+
+        let totalQty = 0;
+        $('.sell-qty-input').each(function() { 
+            const row = $(this).closest('.sale-row');
+            if (row.find('.item-select-check').is(':checked')) {
+                totalQty += parseFloat($(this).val()) || 0; 
+            }
+        });
+
+        if (totalQty <= 0) {
+            Swal.fire('No Quantity Entered', 'Kam az kam aik product ki deliver quantity (Qty > 0) enter karein.', 'warning');
+            return false;
+        }
+
         // Disable submit button and show loading spinner
         $('#btnSubmitTruckSale').prop('disabled', true).html('<i class="fas fa-spinner fa-spin me-2"></i> Saving Sale...');
+
+        // Only include checked rows with qty > 0 in FormData
+        $('.sale-row').each(function() {
+            const isChecked = $(this).find('.item-select-check').is(':checked');
+            const qty = parseFloat($(this).find('.sell-qty-input').val()) || 0;
+            if (!isChecked || qty <= 0) {
+                $(this).find('input').prop('disabled', true);
+            }
+        });
+
         // Gather form data
         var formData = new FormData(this);
+
+        // Immediately re-enable inputs so UI remains responsive
+        $('.sale-row input').prop('disabled', false);
+
         // Send AJAX request
         $.ajax({
             url: $(this).attr('action'),
@@ -525,11 +554,23 @@ $(document).ready(function() {
             },
             error: function(xhr) {
                 let msg = 'Error saving sale.';
-                if (xhr.responseJSON && xhr.responseJSON.message) msg = xhr.responseJSON.message;
-                Swal.fire('Error', msg, 'error');
+                if (xhr.status === 422 && xhr.responseJSON && xhr.responseJSON.errors) {
+                    let errList = [];
+                    $.each(xhr.responseJSON.errors, function(k, v) {
+                        errList.push(Array.isArray(v) ? v.join('<br>') : v);
+                    });
+                    msg = errList.join('<br>');
+                } else if (xhr.responseJSON && xhr.responseJSON.message) {
+                    msg = xhr.responseJSON.message;
+                }
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Validation Error',
+                    html: msg
+                });
             },
             complete: function() {
-                $('#btnSubmitTruckSale').prop('disabled', false).html('Save Sale & Deliver');
+                $('#btnSubmitTruckSale').prop('disabled', false).html('<i class="fas fa-check-circle me-1"></i> Save Sale & Deliver');
             }
         });
         return false;

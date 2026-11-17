@@ -430,8 +430,18 @@ class TruckPurchaseController extends Controller
         $consignment = TruckConsignment::with('items')->findOrFail($id);
 
         if ($consignment->status === 'completed') {
+            if ($request->ajax()) {
+                return response()->json(['success' => false, 'message' => 'This truck consignment has already been completed.'], 400);
+            }
             return back()->with('error', 'This truck consignment has already been completed.');
         }
+
+        // Filter out items with 0 or empty qty before validation
+        $rawItems = (array) $request->input('items', []);
+        $validItems = array_values(array_filter($rawItems, function ($item) {
+            return isset($item['qty']) && (float) $item['qty'] > 0;
+        }));
+        $request->merge(['items' => $validItems]);
 
         $request->validate([
             'customer_id' => 'required|exists:customers,id',
@@ -440,6 +450,11 @@ class TruckPurchaseController extends Controller
             'items.*.truck_consignment_item_id' => 'required|exists:truck_consignment_items,id',
             'items.*.qty'                       => 'required|numeric|min:0.001',
             'items.*.price'                     => 'required|numeric|min:0',
+        ], [
+            'customer_id.required' => 'Customer select karna lazmi hai.',
+            'items.required'       => 'Kam az kam aik product ki deliver quantity (Qty > 0) enter karein.',
+            'items.min'            => 'Kam az kam aik product ki deliver quantity (Qty > 0) enter karein.',
+            'items.*.qty.min'      => 'Product ki quantity kam az kam 0.001 honi chahiye.',
         ]);
 
         try {
