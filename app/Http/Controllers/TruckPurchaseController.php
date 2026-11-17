@@ -480,7 +480,8 @@ class TruckPurchaseController extends Controller
                 $sale->customer_id          = $customerId;
                 $sale->warehouse_id         = $whId;
                 $sale->truck_consignment_id = $consignment->id;
-                $sale->reference            = $consignment->consignment_no ?? '';
+                $refNote = trim($request->comment ?? '');
+                $sale->reference            = $consignment->consignment_no . ($refNote ? " - {$refNote}" : '');
                 $sale->sale_status          = 'posted';
                 $sale->sale_type            = 'direct_sale';
                 $sale->delivery_status      = 'delivered';
@@ -490,7 +491,9 @@ class TruckPurchaseController extends Controller
                 $sale->cash                 = $paidAmount;
                 $sale->shipping_charges     = $shipping;
                 $sale->total_extradiscount  = $discount;
-                $sale->comment              = $request->comment ?: "Direct delivery from Truck #{$consignment->truck_no} (Consignment: {$consignment->consignment_no})";
+                if (\Illuminate\Support\Facades\Schema::hasColumn('sales', 'comment')) {
+                    $sale->comment          = $request->comment ?: "Direct delivery from Truck #{$consignment->truck_no}";
+                }
                 $sale->created_at           = \Carbon\Carbon::parse($saleDate)->format('Y-m-d H:i:s');
                 $sale->save();
 
