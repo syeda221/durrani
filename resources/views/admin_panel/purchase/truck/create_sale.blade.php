@@ -534,19 +534,7 @@ $(document).ready(function() {
         });
         return false;
     });
-        let totalQty = 0;
-        $('.sell-qty-input').each(function() {
-            totalQty += parseFloat($(this).val()) || 0;
-        });
 
-        if (totalQty <= 0) {
-            e.preventDefault();
-            Swal.fire('No Quantity Entered', 'Kam az kam aik product ki deliver quantity enter karein.', 'warning');
-            return false;
-        }
-
-        $('#btnSubmitTruckSale').prop('disabled', true).html('<i class="fas fa-spinner fa-spin me-2"></i> Saving Sale...');
-    });
 
     // Initial triggers for margin indicators
     $('.sale-row').each(function() {
