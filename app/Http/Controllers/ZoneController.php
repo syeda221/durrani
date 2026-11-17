@@ -19,12 +19,28 @@ class ZoneController extends Controller
             'zone' => 'required|string|max:255'
         ]);
 
-        Zone::updateOrCreate(
-            ['id' => $request->edit_id],
-            ['zone' => $request->zone]
-        );
+        if ($request->filled('edit_id')) {
+            $zone = Zone::findOrFail($request->edit_id);
+            $zone->update([
+                'zone' => trim($request->zone)
+            ]);
+            $message = 'Zone updated successfully.';
+        } else {
+            $zone = Zone::create([
+                'zone' => trim($request->zone)
+            ]);
+            $message = 'Zone created successfully.';
+        }
 
-        return response()->json(['status' => 'success']);
+        if ($request->ajax() || $request->wantsJson()) {
+            return response()->json([
+                'status' => 'success',
+                'message' => $message,
+                'zone' => $zone
+            ]);
+        }
+
+        return redirect()->route('zone.index')->with('success', $message);
     }
 
     public function edit($id)
@@ -35,7 +51,16 @@ class ZoneController extends Controller
 
     public function destroy($id)
     {
-        Zone::findOrFail($id)->delete();
-        return response()->json(['status' => 'deleted']);
+        $zone = Zone::findOrFail($id);
+        $zone->delete();
+
+        if (request()->ajax() || request()->wantsJson()) {
+            return response()->json([
+                'status' => 'deleted',
+                'message' => 'Zone deleted successfully.'
+            ]);
+        }
+
+        return redirect()->route('zone.index')->with('success', 'Zone deleted successfully.');
     }
 }

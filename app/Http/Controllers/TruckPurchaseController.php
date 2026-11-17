@@ -550,6 +550,13 @@ class TruckPurchaseController extends Controller
                 return $sale;
             });
 
+            if ($request->ajax()) {
+                return response()->json([
+                    'success' => true,
+                    'message' => "Sale #{$sale->invoice_no} successfully delivered directly from Truck to Customer!",
+                    'redirect_url' => route('truck-purchase.show', $consignment->id),
+                ]);
+            }
             return redirect()->route('truck-purchase.show', $consignment->id)
                 ->with('success', "Sale #{$sale->invoice_no} successfully delivered directly from Truck to Customer!");
 

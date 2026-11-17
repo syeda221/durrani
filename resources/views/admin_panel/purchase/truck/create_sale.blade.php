@@ -486,6 +486,54 @@ $(document).ready(function() {
     }
 
     $('#truckSaleForm').on('submit', function(e) {
+        e.preventDefault(); // Prevent default form submission for AJAX handling
+        let totalQty = 0;
+        $('.sell-qty-input').each(function() { totalQty += parseFloat($(this).val()) || 0; });
+        if (totalQty <= 0) {
+            Swal.fire('No Quantity Entered', 'Kam az kam aik product ki deliver quantity enter karein.', 'warning');
+            return false;
+        }
+        // Disable submit button and show loading spinner
+        $('#btnSubmitTruckSale').prop('disabled', true).html('<i class="fas fa-spinner fa-spin me-2"></i> Saving Sale...');
+        // Gather form data
+        var formData = new FormData(this);
+        // Send AJAX request
+        $.ajax({
+            url: $(this).attr('action'),
+            method: 'POST',
+            data: formData,
+            processData: false,
+            contentType: false,
+            headers: { 'X-Requested-With': 'XMLHttpRequest' },
+            success: function(response) {
+                if (response.success) {
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Sale Saved',
+                        text: response.message,
+                        confirmButtonText: 'OK'
+                    }).then(() => {
+                        if (response.redirect_url) {
+                            window.location.href = response.redirect_url;
+                        } else {
+                            location.reload();
+                        }
+                    });
+                } else {
+                    Swal.fire('Error', response.message || 'Sale could not be saved.', 'error');
+                }
+            },
+            error: function(xhr) {
+                let msg = 'Error saving sale.';
+                if (xhr.responseJSON && xhr.responseJSON.message) msg = xhr.responseJSON.message;
+                Swal.fire('Error', msg, 'error');
+            },
+            complete: function() {
+                $('#btnSubmitTruckSale').prop('disabled', false).html('Save Sale & Deliver');
+            }
+        });
+        return false;
+    });
         let totalQty = 0;
         $('.sell-qty-input').each(function() {
             totalQty += parseFloat($(this).val()) || 0;
