@@ -1085,16 +1085,24 @@ class SaleController extends Controller
         $isEstimate = request()->query('type') === 'estimate' || $sale->sale_type === 'quotation';
 
         if ($user) {
+            $canPrint = ($user->is_admin ?? false)
+                || (method_exists($user, 'hasRole') && ($user->hasRole('admin') || $user->hasRole('Admin')))
+                || $user->can('sales.print')
+                || $user->can('sales.view')
+                || $user->can('sales.create')
+                || $user->can('truck_purchases.view')
+                || $user->can('truck_purchases.create');
+
             if ($isEstimate) {
-                if (!$user->can('quotations.print')) {
+                if (!$canPrint && !$user->can('quotations.print')) {
                     abort(403, 'Unauthorized action. You do not have permission to print quotations.');
                 }
             } elseif ($sale->sale_type === 'sales_order') {
-                if (!$user->can('sales_orders.print')) {
+                if (!$canPrint && !$user->can('sales_orders.print')) {
                     abort(403, 'Unauthorized action. You do not have permission to print sales orders.');
                 }
             } else {
-                if (!$user->can('sales.print')) {
+                if (!$canPrint) {
                     abort(403, 'Unauthorized action. You do not have permission to print sale invoices.');
                 }
             }
